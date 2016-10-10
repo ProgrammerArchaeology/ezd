@@ -1,0 +1,1399 @@
+.TH EZD 1 local
+.SH NAME
+ezd \- easy drawing for programs on X11 displays
+.SH SYNTAX
+\fB ezd
+.ft R
+[ option ...] 
+.SH DESCRIPTION
+The 
+\fBezd\fR
+command reads commands on stdin and draws in one or more
+windows on the X version 11 display defined by the environment variable
+\fBDISPLAY\fR.  Event actions may be reported on stdout.
+The command provides users with simple drawing, editing, and interaction
+capabilities.  The capabilities of \fBezd\fR may be extended by adding
+procedures written in Scheme.
+.SH OPTIONS
+.TP 10
+\fB -i
+invoke a Scheme interpreter.  In this environment
+commands are sent to the \fBezd\fR drawing system
+by calling the procedure \fIezd\fR.
+.TP 10
+\fB -l
+.ft R
+log incomming graphics commands to the file \fBezd.LOG\fR in the current
+directory. Command logging may also be enabled by setting the environment
+variable \fBEZDLOG\fR to the name for the log file.
+.TP 10
+\fB -p
+.ft R
+treat an end-of-file on stdin as a \fBpause\fR command.
+.TP 10
+\fB -nopixmap
+.ft R
+do not buffer window updates in a pixmap.  This may result in the screen
+flickering when windows are updated.  This option may also be selected by
+setting the environment variable \fBEZDNOPIXMAP\fR to any value.
+.TP 10
+\fB -s
+.ft R
+unless this flag, or the \fB-p\fR or \fB-i\fR flags are specified, the
+\fBezd\fR process will ignore the keyboard interrupt signal.
+.TP 10
+\fB -sc\fIxx
+.ft R
+configure the heap.  See the man page for \fBsci\fR for details.
+.SH GETTTING STARTED
+All commands are in the form of Scheme lists. A semicolon ";" indicates the
+start of a comment.  The comment continues until the end of the line.  Space,
+tab, and newline characters may be used to separate
+commands or items within commands. Upper and lower case
+letters are treated identically except inside strings.  A '"' is
+.eo
+represented inside a string by '\"' and a '\' is represented by '\\'.
+.ec \
+Numeric values in commands may be entered as either integer or floating point
+values.
+
+Initially, try a few drawing commands.  If you'd like to print the results,
+use the \fBpostscript\fR command.  For
+multiple windows, or a different coordinate system, use the window
+commands.  Finally, for more sophisticated effects, look at the editing and
+interactive commands.
+
+The drawing model supported by \fBezd\fR can be described as follows. Graphical
+objects are drawn into drawings and drawings are displayed by mapping them onto
+windows.  When drawing objects, their positions and
+line widths are specified in the application's coordinate system.  These
+coordinates and widths may be expressed in real numbers.  Objects are drawn 
+using the \fIpainters algorithm\fR: objects are opaque and later drawn objects
+can
+obscure earlier objects. Drawings are only
+visible when they are mapped into a window.  This mapping describes the
+transformation of the application's coordinate system to the X coordinate
+system.  Operations such as panning and zooming can be simply done by changing
+the mapping of a drawing onto a window.  Multiple drawings may be displayed in
+a window and multiple windows may display a drawing.
+
+If the application doesn't initially explicitly create any windows or
+drawings, then
+the \fIcurrent drawing\fR is named \fIezd\fR and it is displayed in
+a window named \fIezd\fR.  There is
+a 1-1 mapping between the application's coordinate system and X's coordinate
+system.  That is, positions and line widths are specified in pixels with the
+x-axis going from left to right and the y-axis going from top to bottom on the
+window.  The origin is in the upper left corner of the window.
+
+In the command descriptions that follow, literal values are in bold face type
+and arguments are in italics.  Optional items are surrounded by [], and ...
+denotes sequences of zero or more items.
+.SH DRAWING COMMANDS
+Graphical objects are drawn in the \fIcurrent drawing\fR by the following
+commands.
+The \fIxy\fR coordinates and
+object \fIwidth\fR and \fIheight\fR are specified in terms of the application's
+coordinate system.  Lines are either minimal width, or \fIline-width\fR
+units wide (see the \fBscale\fR command to understand how application
+coordinates and line widths are translated to pixels).  Lines are solid unless
+\fBdash\fR is specified.
+Objects are drawn in the display's default black unless a
+\fIcolor\fR is supplied.  Colors are specified by their X color name.  One
+additional color, \fBclear\fR, is defined that allows the creation of
+transparent objects.  This is typically used to make invisible objects that
+are sensitive to events.
+A few stipple patterns have been defined:  \fBs0\fR, \fBs1\fR, \fBs2\fR, ... 
+\fBs16\fR, where the number is the number of pixels that are drawn in a
+4-by-4 pattern.
+
+\fB (point \fIx y [color]\fB)\fR
+
+draws a point.
+
+\fB (line \fIx1 y1 x2 y2 [line-width] [color] [\fBdash\fI]\fB)\fR
+
+draws a line from \fIx1 y1\fR to \fIx2 y2\fR.
+
+\fB (arc \fIx y width height angle1 angle2 [line-width] [color] [\fBdash\fI]\fB)\fR
+.br
+\fB (fill-arc \fIx y width height angle1 angle2 [color] [stipple]\fB)\fR
+.br
+\fB (pie-arc \fIx y width height angle1 angle2 [color] [stipple]\fB)\fR
+
+draws an unfilled or filled arc, where \fIx\fR and \fIy\fR are the minimum
+coordinates of the rectangle defining the arc. 
+The arc's rectangle size is \fIwidth\fR by \fIheight\fR.  The arc starts at
+\fIangle1\fR degrees and spans \fIangle2\fR degrees.  Positive angles are
+measured in the same direction as moving from the positive x-axis to the
+positive y-axis.  An arc drawn by \fBfill-arc\fR is closed by drawing a line
+between the end points of the arc.  An arc drawn by \fBpie-arc\fR is closed by
+drawing a line from each arc end point to the center of the rectangle defining
+the arc.
+
+\fB (rectangle \fIx y width height [line-width] [color] [\fBdash\fI]\fB)\fR
+.br
+\fB (fill-rectangle \fIx y width height [color] [stipple]\fB)\fR
+
+draws an unfilled or filled rectangle, where \fIx\fR and \fIy\fR are the
+minimum coordinates.
+
+\fB (fill-polygon \fIx1 y1 x2 y2 ... xn yn [color] [stipple]\fB)\fR
+
+draws a polygon with these points and fills it.
+
+\fB (text \fIx y [width height center-x center-y] \fB"\fItext\fB"\fI [color] [stipple] [\fB"\fIfont\fB"\fI]\fB) \fR
+
+writes text where \fIx\fR and \fIy\fR are the minimum coordinates of the
+rectangle containing the text.  If width, height and positioning information
+is supplied then that information describes the size of the rectangle and
+how the text is to be placed in it.  If the text will not fit in that
+rectangle when the drawing is scaled for display in a window, then no text
+is displayed.  \fICenter-x\fR is specified as \fBleft\fR, \fBcenter\fR, or
+\fBright\fR, and \fIcenter-y\fR is specified as \fBup\fR, \fBcenter\fR, or
+\fBdown\fR.  Note too that the optional font name is specified by a string that
+is the X font name.
+
+\fB (quilt \fIx y width height columns rows color ... \fB"\fIsquares\fB")\fR
+.br
+\fB (quilt \fIx y width height columns rows color ... \fB#(\fIsquares\fB))\fR
+
+draws a rectangle filled with a number of different colored rectangles.  The
+minimum coordinates are \fIx\fR and \fIy\fR and the rectangle is \fIwidth\fR
+wide and \fIheight\fR high.  The rectangle is in turn broken horizontally into
+a number of \fIcolumns\fR and vertically into a number of \fIrows\fR.  The
+square colors are defined in \fIsquares\fR which contains indexes into the list
+of \fIcolors\fR.  When \fIsquares\fR is a string, each square's color is
+defined by a letter, where A is the first color, B the second, etc.  A quilt
+may have holes in it.  Each missing square is denoted by using a space as the
+color index.  When more than 26 colors are desired, the squares are defined
+by entries in a Scheme vector, where 0 is the first color, 1 the second, etc.
+A hole is specified by #f.
+
+\fB (bitmap \fIx y [width height] filename [color ...]\fB)\fR
+
+draws a quilt defined in a file.  The file must contain an X11 bitmap,
+a monochrome portable bitmap (PBM, type P1), a gray scale portable bitmap
+(PGM, type P2), or a color portable bitmap (PPM, type P3).  If the width and
+height of the quilt are not defined, they default to the dimensions of the
+bitmap. X11 and monochrome
+bitmaps are handled as follows.  If no color is suppled, then the bits that
+are on are drawn in black, and the bits that are off are holes.  If one color
+is supplied, then the bits that are on are drawn in that color, and the bits
+that are off are holes.  When two colors are supplied, the bits that are on are
+drawn in the first color, and the bits that are off are drawn in the second
+color.  Gray scale bitmaps are drawn using a 101 step gray scale ramp when no
+colors are supplied.  When colors are supplied, they define the gray scale ramp
+that is to be used (darkest colors first).  Color bitmaps are drawn using the
+RGB values contained in the map.
+.SH COLORS
+\fB(define-color \fInew-color \fB#x\fIRRGGBB\fB)\fR
+.br
+\fB(define-color \fInew-color hue saturation value\fB)\fR
+.br
+\fB(define-color \fInew-color color\fB)\fR
+
+defines a new color, where the value of \fInew-color\fR is specified by the
+RGB value encoded in a hexadecimal number \fB#x\fIRRGGBB\fR, by the HSV
+value, or by the value of \fIcolor\fR.
+
+\fB(define-stipple \fIstipple row-bit-value ...\fB)\fR
+
+defines a new stipple.  Each \fIrow-bit-value\fR is an integer that defines
+the bits in one row of the stipple from left-to-right.  The rows are specified
+from top-to-bottom and 4, 8, or 16 rows must be specified.
+
+Getting just the right color in drawings is a difficult process.  Variable
+colors allow the user to define colors that can be adjusted.
+
+\fB(define-variable-color \fIvariable-color \fB#x\fIRRGGBB\fB)\fR
+.br
+\fB(define-variable-color \fIvariable-color hue saturation value\fB)\fR
+.br
+\fB(define-variable-color \fIvariable-color color\fB)\fR
+
+defines a variable color, where the initial value of \fIvariable-color\fR
+is specified by the RGB value encoded in the hexadecimal number
+\fB#x\fIRRGGBB\fR, the HSV value, or the value of \fIcolor\fR.
+
+\fB(set-variable-color \fIvariable-color \fB#x\fIRRGGBB\fB)\fR
+.br
+\fB(set-variable-color \fIvariable-color hue saturation value\fB)\fR
+.br
+\fB(set-variable-color \fIvariable-color \fIcolor\fB)\fR
+
+sets the value of \fIvariable-color\fR to the RGB value encoded in the
+hexadecimal number \fB#x\fIRRGGBB\fR, the HSV value, or the value of
+\fIcolor\fR.
+
+\fB(edit-variable-color \fIvariable-color\fB)\fR
+
+displays a color control panel with four sliders and a text input
+area that allows the user to
+modify \fIvariable-color\fR.  Rgb values are changed by moving the appropriate
+slider.  Gray values are set by moving the gray slider.  When a slider moves,
+the name of the color (found in /usr/local/lib/X11/rgb.txt) closest to the
+value of the sliders and the offset from the slider values to it is displayed.
+The color can also be set by typing a color name or hexadecimal value into the
+input area.  For details on how to run sliders or use text input areas, see
+the corresponding sections of this document.
+
+\fB(get-color-value \fIcolor\fB)\fR
+
+writes a record on stdout containing the RGB and HSV definitions of a color.
+See the HANDLING EVENTS section for more details.
+.SH DRAWINGS
+Graphical objects are drawn into drawings that are displayed by mapping
+them into windows.  If no drawings are defined, then the default drawing
+\fIezd\fR is used.
+
+\fB (set-drawing \fIdrawing\fB)\fR
+
+sets the name of the \fIcurrent drawing\fR to \fIdrawing\fR.  All graphics
+commands that follow pertain to that drawing.  Legal drawing names are any
+Scheme symbol.
+
+\fB (save-drawing)\fR
+
+pushes the name of the \fIcurrent drawing\fR onto a stack of drawing names.
+
+\fB (restore-drawing)\fR
+
+pops the name of a drawing off the stack of drawing names and makes it the
+\fIcurrent drawing\fR.
+.SH EDITING DRAWINGS
+Objects in drawings may be named, replaced, deleted or rearranged by the
+following commands.
+
+\fB (object \fIobject [drawing-command ...]\fB)\fR
+
+draws a named object in the \fIcurrent drawing\fR.  Object names may be any
+Scheme symbol except *.
+If the object already exists,
+then it is replaced by the new object.  If no drawing commands are specified,
+the the object still exists, but with a null graphical representation.
+The first time that a named object is drawn
+assigns its position in the drawing hierarchy.  Whenever it is redrawn, it will
+occupy the same position unless moved by a \fBfloat\fR or \fBsink\fR command,
+or the entire drawing is cleared by a \fBclear\fR command.
+
+\fB (float \fIobject\fB)\fR
+
+move the named object to the top of the \fIcurrent drawing\fR.
+
+\fB (float \fIobject1 object2\fB)\fR
+
+move \fIobject1\fR on top of \fIobject2\fR in the \fIcurrent drawing\fR.
+
+\fB (sink \fIobject\fB)\fR
+
+move the named object to the bottom of the \fIcurrent drawing\fR.
+
+\fB (sink \fIobject1 object2\fB)\fR
+
+move \fIobject1\fR under \fIobject2\fR in the \fIcurrent drawing\fR.
+
+\fB (draw-now)\fR
+
+causes any buffered changes in drawings to be immediately reflected in windows
+displaying
+them.  Normally, \fBezd\fR will buffer changes until an appropriate time to
+redraw the windows.  At that time, it will do a minimum of redrawing to make
+the changes.
+
+\fB (clear)
+.ft R
+
+clears the \fIcurrent drawing\fR and deletes the ordering and event actions
+associated with named objects.
+.SH WINDOW COMMANDS
+Drawings are displayed when they are mapped into a window.  Windows are
+created and drawings are mapped into windows by the commands found in this
+section.
+
+\fB (window \fIname [right down] width height [\fBfixed-size\fI] [\fBpoints\fI] [\fB"\fItitle\fB"\fI] [foreground [background]]\fB)\fR
+
+defines a display window with the name \fIname\fR.
+The location of the upper left corner of the window is \fIright\fR units right
+and \fIdown\fR units down from the upper left corner of the display.
+The window is \fIwidth\fR units wide and
+\fIheight\fR units high.  Window location, width, and height are assumed to be
+in pixels
+unless the keyword \fBpoints\fR is supplied in which case they are in points
+(~1/72 inches). The window may be resized unless \fBfixed-size\fR is specified.
+The window and icon are titled \fB"\fItitle\fB"\fR.
+The foreground color is either the display's default black or \fIforeground\fR.
+The background color is either the display's default white or \fIbackground\fR.
+Windows are only visible when there are one or more drawings displayed in
+them.  If the window already exists when this command is issued, the existing
+window with this name is deleted.
+
+\fB (delete-window \fIwindow\fB)\fR
+
+deletes the window named \fIwindow\fR.
+
+\fB (save-cursor \fIwindow\fB) \fR
+
+saves the current cursor on a cursor stack associated with the window
+\fIwindow\fR.
+
+\fB (set-cursor \fIwindow cursor\fB) \fR
+
+sets the cursor for window \fIwindow\fR to \fIcursor\fR.  Cursor
+names are as defined in <X11/cursorfont.h>.  The default cursor is XC_left_ptr.
+
+\fB (restore-cursor \fIwindow\fB) \fR
+
+pops a cursor from the cursor stack associated with
+\fIwindow\fR and makes it the window's cursor.
+
+\fB (overlay \fIwindow drawing [right down width height [\fBpoints\fI]]\fB) \fR
+
+overlays the \fIdrawing\fR over the existing drawings in the \fIwindow\fR.
+If the drawing is currently visible in the window,
+it is moved to the new position.  There is
+a 1-1 mapping between the application's coordinate system and X's coordinate
+system.  That is, positions and line widths are specified in pixels with the
+x-axis going from left to right and the y-axis going from top to bottom on the
+window.  The origin is in the upper left corner of the window.
+An optional clipping region may be specified to restrict the drawing to
+a portion of the window. The location of the upper left corner of the clipping
+region is \fIright\fR units right
+and \fIdown\fR units down from the upper left corner of the window.
+The clip region is \fIwidth\fR units wide and
+\fIheight\fR units high. Clip region location, width, and height are assumed to
+be in pixels
+unless the keyword \fBpoints\fR is supplied in which case they are in points
+(~1/72 inches).
+
+\fB (underlay \fIwindow drawing [right down width height [\fBpoints\fI]]\fB) \fR
+
+places the \fIdrawing\fR under the existing drawings in the \fIwindow\fR.
+An optional clipping region may be specified to restrict the drawing to
+a portion of the window. If the drawing is currently visible in the window,
+it is moved to the new position.  There is
+a 1-1 mapping between the application's coordinate system and X's coordinate
+system.  That is, positions and line widths are specified in pixels with the
+x-axis going from left to right and the y-axis going from top to bottom on the
+window.  The origin is in the upper left corner of the window.
+An optional clipping region may be specified to restrict the drawing to
+a portion of the window. The location of the upper left corner of the clipping
+region is \fIright\fR units right
+and \fIdown\fR units down from the upper left corner of the window.
+The clip region is \fIwidth\fR units wide and
+\fIheight\fR units high. Clip region location, width, and height are assumed to
+be in pixels
+unless the keyword \fBpoints\fR is supplied in which case they are in points
+(~1/72 inches).
+
+\fB (delete-view \fIwindow drawing\fB) \fR
+
+deletes the \fIdrawing\fR from the \fIwindow\fR.  If this is
+the only drawing displayed in the window, then the window will no longer be
+visible.
+
+When a drawing is mapped onto a window, the default coordinate system is that
+one drawing unit is one pixel.  This can be changed by the \fBorigin\fR
+and \fBscale\fR commands.  The \fBorigin\fR command specifies the X
+coordinates (in either pixels or points) of the origin of the application's
+coordinate system.  The \fBscale\fR command provides the scale factors (in either pixels or points) for scaling the x and y coordinates and line widths. 
+The coordinate transformations are:
+
+.in +10
+.br
+X_x = drawing_x * scale_x + origin_x
+.br
+X_y = drawing_y * scale_y + origin_y
+.br
+X_line_width = drawing_line_width * scale_linewidth
+.in -10
+
+\fB(origin \fIwindow drawing x y [\fBpoints\fI]\fB) \fR
+
+defines the X coordinates of the origin in either pixels (the
+default) or points for \fIdrawing\fR mapped onto \fIwindow\fR.
+In X the origin is in the upper left corner of the
+window, the positive x-axis goes from left to right on the window, and the
+positive y-axis goes from top to bottom of the window.
+
+\fB(scale \fIwindow drawing scale-x scale-y scale-width [\fBpoints\fI]\fB)\fR
+
+defines the scale factors for the x,y coordinates and line widths in
+either pixels (the default) or points for \fIdrawing\fR mapped onto 
+\fIwindow\fR.  Scale factors may be real numbers.
+
+Using these two commands, one can map a drawing with a classical cartesian
+coordinate system onto a 400 by 400 pixel window by the commands:
+.nf
+
+	(origin any-window a-drawing 200 200)
+	(scale any-window a-drawing 1 -1 1)
+.fi
+.SH INTERACTIVE COMMANDS
+Objects in drawings are made sensitive to events such as keyboard and mouse
+actions by the commands in the sections that follow.  The initial commands
+provide
+a mechanism for monitoring simple events such as mouse clicks, mouse motion,
+and keystrokes.  The application writer may choose to simply log the event to
+the application, or they may supply a sophisticated event handler written in
+Scheme.
+
+In order to simplify application writing, \fBezd\fR provides commands for
+creating a modest number of 
+interface objects such as buttons, sliders, menus and text
+drawings.  Each interface object consists of a graphical representation and
+appropriate event handlers.  Such objects often need to be communicated with
+once created.  For example, a slider object may wish to allow the user to get
+or set the value of the slider.  To allow this, \fBezd\fR provides the
+commands:  \fBget-attributes\fR to get an attribute value from and object,
+and \fBset-attribute\fR to set the value of an object's attribute.
+
+Finally, the user is encouraged to extend \fBezd\fR by writing their own
+interface objects.  In many ways, this is a similar philosophy to Xt where one
+is encouraged to reuse or extend existing widgets.  However, this is much
+easier in \fBezd\fR as it provides a simpler and more powerful graphics and
+event model than is provided by Xlib and Xt.  Enough tub beating, on to
+events.
+.SH HANDLING EVENTS
+One or more \fBwhen\fR commands is used to make an object sensative to events.
+
+\fB (when \fIobject event action\fB) \fR
+.br
+\fB (when \fIobject [keyboard-modifier ...] \fBbutton\fIb\fBdown\fI action\fB) \fR
+.br
+\fB (when \fIobject\fB * #f) \fR
+
+defines an event handler for an object in the \fIcurrent drawing\fR.
+\fIObject\fR is either the name of a specific object, or a \fB*\fR to
+denote all objects in the drawing.  The type of event that the object is
+sensitive to is defined by \fIevent\fR.  The event types are:
+.nf
+
+	\fBenter\fR		mouse entered the object
+	\fBexit\fR		mouse exited the object
+	\fBmotion\fR		mouse moved within the object
+	\fBbutton\fIb\fBup\fR	mouse button number \fIb\fR came up. Buttons are numbered 1-5.
+	\fBbutton\fIb\fBdown\fR	mouse button number \fIb\fR went down. This event may be
+			preceeded by any combination of the keywords \fBshift\fR, \fBmeta\fR,
+			\fBctrl\fR, and \fBlock\fR indicating that those keys must be down
+			for the event to occur.
+	\fBkeypress\fR	keyboard key pressed
+	\fBkeyrelease\fR	keyboard key released
+	\fBresize\fR		a window containing the drawing was resized.
+	\fBexpose\fR		a window containing the drawing was exposed.
+	\fBoverlay\fR		the drawing was overlayed or underlayed on a window.
+	\fBvisible\fR		a change was made to the portion of the drawing that is visible.
+	\fBget-attributes\fR	a message was sent to the object via the \fBget-attributes\fR command.
+	\fBset-attributes\fR	a message was sent to the object via the \fBset-attributes\fR command.
+
+.fi
+The \fIaction\fR is either a Scheme expression to evaluate or a Scheme
+procedure (that takes no arguments) to be called.
+Once defined, event handlers remain until they are deleted by supplying
+\fB#f\fR as the action, or the drawing is cleared by the \fBclear\fR command.
+All event actions associated with an object may be deleted by supplying \fB*\fR
+as the event type and \fB#f\fR as the action.
+
+Programs using \fBezd\fR as a graphics server can log events to the application
+by supplying \fB(log-event \fI[user-info ...]\fB)\fR as the \fIaction\fR.
+Each event causes an
+event record of the following form to be printed on stdout:
+
+   \fB(\fIevent window drawing object drawing-x drawing-y mouse-x mouse-y [misc-info ...] [user-info ...]\fB)\\n \fR
+
+where \fIevent\fR is the name of the event, \fIwindow\fR the name of the
+window, and \fIobject\fR is the name of the object (or \fB*\fR if no object was
+involved).  The current mouse position in the drawing is returned by
+\fIdrawing-x\fR and \fIdrawing-y\fR and the current mouse position in the
+window in the X coordinate system is returned
+by \fImouse-x\fR and \fImouse-y\fR (these values may be invalid for resize,
+expose, visible, and overlay events). The last items are optional event
+specific
+information returned in \fImisc-info\fR and caller supplied items in
+\fIuser-info\fR.  The event
+specific information is defined as follows:
+.TP 10
+\fB exit
+.ft R
+a list of the names of the window, drawing, and object now containing the
+mouse cursor.  A window value equal to \fB#f\fR indicates that the mouse is in
+a window not controlled by \fBezd\fR.
+.TP 10
+\fB button\fIb\fBdown
+.ft R
+a list of the keyboard modifier keys.
+.TP 10
+\fB keypress\fR and \fBkeyrelease
+.ft R
+a list of a string holding the ISO Latin-1 value of the key and a number
+that is the X KeySym for the key.
+.TP 10
+\fB resize
+.ft R
+a list of four window measurements in pixels: old window width, old window height, new window width, and new window height.
+.TP 10
+\fB overlay
+.ft R
+a list defining the bounding box for the overlay measured in pixels in the X
+coordinate system: x, y, width, and height.  If the drawing is no longer
+visible in the window associated with the event, then \fB#f\fR is the value of
+each coordinate.
+.TP 10
+\fB visible
+.ft R
+a list defining the bounding box for the portion of the drawing that is
+visible in the window associated with the event in the drawing's coordinate
+system: x, y, width, and height.  If the drawing is no longer visible in the
+window associated with the event, then \fB#f\fR is the value of each
+coordinate.
+.TP 10
+\fB get-attributes
+a list of attributes.  Each attribute is either a symbol or a list
+of a symbol and its optional arguments.  The event handler for this event must
+return a list of values of the attributes.
+.TP 10
+\fB set-attributes
+a list of the attributes and their new values.  Each attribute is a list
+consisting of the attribute name followed by any arguments.
+.TP 10
+\fB color-value
+a list of RGB and HSV values for a color.  The window, drawing,
+object, and mouse coordinate values are invalid in this record.
+.PP
+The \fBresize\fR, \fBexpose\fR, \fBoverlay\fR, and \fBvisible\fR events
+happen to all objects in the drawing.  When one of these events happen, the
+event handler for all objects (\fIobject\fR = *) is called and then any object
+specific event handlers are called.
+
+Often an application wishes to detect that the user "clicked" a button on the
+object.  While one can implement this by installing event handlers for object
+entry, exit, button down, and button up; this functionality can be installed
+with one command.
+
+\fB (click \fIobject [keyboard-modifier ...] button-number action\fB) \fR
+
+defines an action to be done when a button is clicked, i.e. pressed down,
+possibly moved, and then released within the object in the \fIcurrent
+drawing\fR.  \fIObject\fR is an object
+name or \fB*\fR and \fIbutton-number\fR is the number of the button.  As with
+the \fBwhen\fR command, any combination of \fBshift\fR, \fBmeta\fR, \fBctrl\fR,
+\fBlock\fR may be specified to indicate that those keys must be down when the
+button is pressed. \fI\Action\fR is as previously defined in the \fBwhen\fR
+command. When the action
+is taken, the event type is \fBclick\fR and the \fImisc-info\fR associated
+with the event is the mouse's drawing and X coordinates within the window
+when the button was pressed.
+
+An objects attributes can be queried and set by the following commands.  Rather
+than thinking about abstract attributes, it is more productive to examine
+something like the slider object to see how it uses attributes.
+
+\fB (get-attributes \fIdrawing object tag attribute ...\fB) \fR
+
+causes a \fBget-attributes\fR event to happen to \fIobject\fR in \fIdrawing\fR.
+Each \fIattribute\fR is either a symbol or a list consisting of a symbol and
+any object dependent arguments.  The \fItag\fR is a Scheme constant (typically
+a number or symbol) used to identify the result.  The object's event handler
+returns a list of
+values associated with the attributes.  These attribute values are packaged up
+into an event record of the following form and printed in stdout:
+
+  \fB(GET-ATTRIBUTES #F \fIdrawing object \fB#F #F\fI mouse-x mouse-y tag values ...\fB)\\n \fR
+
+\fB (set-attributes \fIdrawing object attribute ...\fB) \fR
+
+causes a \fBset-attributes\fR event to happen to \fIobject\fR in \fIdrawing\fR.
+Each \fIattribute\fR is a list consisting of a symbol followed by any object
+dependent arguments.
+.SH WRITING EVENT HANDLERS IN SCHEME
+When the event handler is written in Scheme and executed within \fBezd\fR,
+event information is in the values of variables in the top level
+environment.  They are:
+.nf
+
+	\fB*user-event-window*\fR	name of window where event occurred
+	\fB*user-event-drawing*\fR	name of drawing where event occurred
+	\fB*user-event-object*\fR	name of object (or \fB*\fR) where the event occurred
+	\fB*user-event-x*\fR		mouse position in drawing coordinates
+	\fB*user-event-y*\fR
+	\fB*user-event-type*\fR	type of event
+	\fB*user-event-xevent*\fR	X event structure or \fB#f\fR
+	\fB*user-event-misc*\fR	list of event specific information
+	\fB*mouse-window-x*\fR	mouse position in window in X coordinates
+	\fB*mouse-window-y*\fR
+	\fB*mouse-button1*\fR	boolean indicating state of button 1
+	\fB*mouse-button2*\fR	boolean indicating state of button 2
+	\fB*mouse-button3*\fR	boolean indicating state of button 3
+	\fB*mouse-button4*\fR	boolean indicating state of button 4
+	\fB*mouse-button5*\fR	boolean indicating state of button 5
+
+.fi
+Scheme actions may issue \fBezd\fR commands using the procedure \fBezd\fR that
+accepts one or more commands.  When an event action is evaluated, the
+\fIcurrent drawing\fR is the drawing in which the event happened.  For example,
+if one wanted objects to be deleted when button 2 was pressed with the shift
+key depressed, then one could call:
+.nf
+
+	(ezd '(when * shift button1down (ezd `(object ,*user-event-object*))))
+
+.fi
+Object attributes may be accessed by the following procedures, where
+\fIattributes\fR is as defined in the earlier commands.
+
+\fB (get-attributes \fIdrawing object attributes...\fB) \fR returns a list of
+attributes of \fIobject\fR in \fIdrawing\fR.
+
+\fB (get-attribute \fIdrawing object attribute\fB) \fR returns a single
+attribute of \fIobject\fR in \fIdrawing\fR.
+
+\fB (set-attributes \fIdrawing object attributes...\fB) \fR sets one or more
+attributes of \fIobject\fR in \fIdrawing\fR.
+
+Color values may be obtained by the following procedures.
+
+\fB (get-rgb-color-value \fIcolor\fB)\fR
+
+\fB (get-hsv-color-value \fIcolor\fB)\fR
+
+One other procedure that those implementing event handlers in Scheme may find
+useful is \fB(ezd-reset)\fR.  When called from the top-level interpreter it
+resets the \fBezd\fR system.
+.SH PUSH BUTTONS
+\fB (push-button \fIname x y width height "text" ... action [foreground [background]] ["font"]\fB) \fR
+
+defines a simple button in the \fIcurrent drawing\fR
+where \fIname\fR is the name of the button and
+\fIx\fR and \fIy\fR are the minimum
+coordiates of the \fIwidth\fR by \fIheight\fR rectangle defining the button.
+The button is drawn as a filled rectangle in the \fIbackground\fR color
+(default is white) with a \fIforeground\fR colored (default is black) border.
+The button \fItext\fR is written in the center of the button in the
+\fIforeground\fR color and the optional \fIfont\fR.  If several button
+\fItexts\fR are provided, then each time the button \fIaction\fR is taken, the
+next button \fItext\fR is displayed.
+
+When the mouse enters a button with an \fIaction\fR not equal to \fB#f\fR, the
+rectangle border is thickened.  When mouse button 1 is pressed, the button
+colors are reversed.  When button 1 is released, the button \fIaction\fR is
+taken and then the button is drawn normally.  When the button action is taken,
+the \fIevent\fR type is \fBbutton1up\fR and the event specific information is a
+list containing the button text when the button was pressed and the button
+text that will next be displayed.  Note that in order for the button
+action to be taken, the mouse must remain within the button while
+mouse button 1 is pressed and released.
+
+Once a button has been created, the \fBget-attributes\fR command (or Scheme
+procedure) can be used to access the following attributes:  \fBx\fR, \fBy\fR,
+\fBwidth\fR, \fBheight\fR, \fBaction\fR, \fBtext\fR (returns a list of the
+button text items), \fBfont\fR, \fBforeground\fR, \fBbackground\fR, and
+\fBattributes\fR (returns a list of the attributes supported by this type of
+object).
+
+The \fBset-attributes\fR command (or Scheme procedure) can be used
+to change the button.  The attributes supported that change the buttons
+look or action are: \fB(x \fIx\fB)\fR,
+\fB(y \fIy\fB)\fR, \fB(width \fIwidth\fB)\fR,
+\fB(height \fIheight\fB)\fR, \fB(action \fIaction\fB)\fR,
+\fB(text "\fItext" ...\fB")\fR, \fB(font "\fIfont\fB"),
+\fB(foreground \fIforeground\fB)\fR, and \fB(background \fIbackground\fB)\fR.
+The button is deleted by setting the attribute \fB(delete-object)\fR.  For
+example, the button named \fBzoom\fR in the
+drawing \fBbuttons\fR can be have it's
+width and height doubled by the following Scheme expression:
+.nf
+
+	(set-attributes 'buttons 'zoom
+	    `(width ,(* 2 (get-attribute 'buttons 'zoom 'width)))
+	    `(height ,(* 2 (get-attribute 'buttons 'zoom 'height))))
+
+.fi
+.SH CHECK BUTTONS
+\fB (check-button \fIname x y width height "text" value action [foreground [background]] ["font"]\fB) \fR
+
+defines a check-button in the \fIcurrent drawing\fR
+where \fIname\fR is the name of the button and
+\fIx\fR and \fIy\fR are the minimum
+coordiates of the \fIwidth\fR by \fIheight\fR rectangle defining the button.
+The check-button is drawn as a circle to the left of the button \fItext\fR in
+the
+\fIforeground\fR color (default is black).  If the \fIvalue\fR is equal to #f
+(denoting false), then the
+circle is filled with the \fIbackground\fR color (default is white).  When the
+value is #t (denoting true), the circle is filled with the foreground color.
+The check-button's value is complemented by clicking
+mouse
+button 1 within either the circle or the button text.  The
+check-button action is taken when the button comes up.
+
+Check-buttons can be members of a "radio button set" that gives them the
+following
+behavior.  If the check-button
+is set, then clicking on it will have no effect.  If it's not
+set, then clicking on it will clear the member of the radio set that was set,
+set it, and execute it's action.
+
+When the check-button action is taken,
+the \fIevent\fR type is \fBbutton1up\fR and the event specific information is a
+list containing the new value of the check-button.  Note that in order for the
+check-button
+action to be taken, the mouse must remain within the check-button while
+mouse button 1 is clicked.
+
+Once a button has been created, the \fBget-attributes\fR command (or Scheme
+procedure) can be used to access the following attributes: \fBx\fR, \fBy\fR,
+\fBwidth\fR, \fBheight\fR, \fBaction\fR, \fBtext\fR, \fBfont\fR,
+\fBforeground\fR, \fBbackground\fR, \fBvalue\fR, \fBradio-button-set\fR
+(returns a list of buttons that are in the radio button set), and
+\fBattributes\fR (returns a list of the attributes supported by this type of
+object).
+
+The \fBset-attributes\fR command (or Scheme procedure) can be used
+to change the check-button.  The attributes supported that change the
+look or action are: \fB(x \fIx\fB)\fR,
+\fB(y \fIy\fB)\fR, \fB(width \fIwidth\fB)\fR,
+\fB(height \fIheight\fB)\fR, \fB(action \fIaction\fB)\fR,
+\fB(text "\fItext\fB")\fR, \fB(font "\fIfont\fB"),
+\fB(foreground \fIforeground\fB)\fR, \fB(background \fIbackground\fB)\fR,
+and \fB(radio-button-set \fIbutton-name ...\fB)\fR.  
+The check-button is deleted by setting the attribute \fB(delete-object)\fR.
+For example, the check-buttons \fBv1\fR, \fBb2\fR, and \fBb3\fR in the drawing
+\fBbuttons\fR can be made into a "radio button set" by setting the
+\fBradio-button-set\fR attribute on anyone of the
+check-buttons by an \fBezd\fR command
+like:
+.nf
+
+	(set-attributes buttons b1 (radio-button-set b1 b2 b3))
+
+.fi
+.SH TRANSPARENT BUTTONS
+\fB (TRANSPARENT-CHECK-BUTTON \fIname x y width height text value action [foreground [background]] ["font"]\fB)\fR
+.br
+\fB (TRANSPARENT-PUSH-BUTTON \fIname x y width height text... action [foreground[background]] ["font"]\fB)\fR
+
+define transparent check-buttons and push-buttons.  Transparent buttons
+are like the previously defined buttons, but with one important difference:
+they may be placed on top of the application's working
+area of the display as they do not obstruct the underlying graphics.
+
+When the mouse is not in a button, the button
+is "transparent", i.e. drawn with a stipple.  This allows the underlying data
+to be displayed, yet the button is still barely visible.  When the mouse
+enters the button, the button is drawn more
+visibly, yet it is still transparent enough to allow the underlying graphics
+to peek through.
+
+Transparent buttons can be members of a "button set" that gives them the
+following behavior.  When the mouse is in any member of the button set, all
+buttons in the set are drawn more visibly.
+
+When a button (or button set)
+needs to be moved to another area of the display, move the mouse into one of
+the buttons, press button 3, and then drag it (holding button 3 down) to the
+desired position.
+
+The \fBbutton-set\fR attribute, a list of button names in the button set, is
+set by the \fBset-attributes\fR command (or
+Scheme procedure) and accessed by the \fBget-attributes\fR command (or Scheme
+procedure).
+
+For more information about transparent controls, set the WRL Technical Note
+TN-30, "Transparent Controls for Interactive Graphics".
+.SH STRING INPUT AREAS
+\fB (string-input \fIname x y width height "text" action [color] [\fB"\fIfont\fB"\fI]\fB) \fR
+
+defines an object named \fIname\fR in the \fIcurrent drawing\fR that is a 
+rectangle defined by \fIx\fR, \fIy\fR, \fIwidth\fR, and \fIheight\fR that
+displays the string \fItext\fR and accepts keyboard input.  When the mouse is
+within it, the cursor is changed to a pencil.  As each key is typed, it is
+appended to the text displayed in the input area.  The \fIfont\fR and
+\fIcolor\fR for
+displaying the input text can specified.  Backspace, or control-h delete the
+last character typed, and control-u deletes all characters typed.  When the
+return key is pressed the user action is executed.  The \fIevent\fR type is
+\fBstring-input\fR and the \fImisc-info\fR is the current value of the input
+string.
+
+Once a string-input area has been created, the \fBget-attributes\fR command
+(or Scheme
+procedure) can be used to access the following attributes: \fBx\fR, \fBy\fR,
+\fBwidth\fR, \fBheight\fR, \fBaction\fR, \fBtext\fR,
+\fBtext-color\fR, \fBfont\fR, and
+\fBattributes\fR (returns a list of the attributes supported by this type of
+object).
+
+The \fBset-attributes\fR command (or Scheme procedure) can be used
+to change the string-input object.  The attributes supported that change the
+look or action are: \fB(x \fIx\fB)\fR,
+\fB(y \fIy\fB)\fR, \fB(width \fIwidth\fB)\fR,
+\fB(height \fIheight\fB)\fR, \fB(action \fIaction\fB)\fR,
+\fB(text "\fItext\fB")\fR, \fB(text-color \fIcolor\fB)\fR,
+\fB(font "\fIfont\fB")\fR.  
+The string-input is deleted by setting the attribute \fB(delete-object)\fR.
+For example, the following command changes the text string in the string-input
+\fBs\fR in the drawing \fBd\fR:
+.nf
+
+	(set-attributes d s (text "The new value"))
+
+.fi
+.SH POPUP MENUS
+\fB (define-popup \fIpopup-name menu-entry menu-action ... [foreground background] [\fB"\fIfont\fB"\fI]\fB) \fR
+
+defines a Scheme procedure named \fIpopup-name\fR that is called as the
+action on
+a button down event to display a popup
+menu.  The user supplies a procedure name \fIpopup-name\fR, a list of \fImenu
+entries\fR and \fIactions\fR and optionally \fIforeground\fR and
+\fIbackground\fR colors and a \fIfont\fR.
+Each entry in the menu is defined by a \fImenu-entry\fR and a
+\fImenu-action\fR.  The \fImenu-entry\fR is either a string, a procedure with
+no arguments, or an
+expression that evaluates to a string.  The \fImenu-action\fR is as defined
+in the \fBwhen\fR command.
+
+Once a popup menu has been defined, the menu is  attached to some object by
+using a \fBwhen\fR command to associate
+the evaluation of the popup procedure with a button press.  When the button
+is pressed, the menu will come up under the button.  When the button comes
+up, the action associated with the menu entry is executed.  Moving the
+mouse outside the menu without releasing the button will cause the menu to
+disappear.  When the popup menu action is evaluated, the \fIevent\fR type is
+\fBpopup\fR and the \fImisc-info\fR is the name of the popup menu procedure
+and the menu entry's text.  Menu entries that have the action \fB#f\fR do not
+respond to the mouse and their text is displayed in halftone.
+
+Once a popup menu is defined, various attributes may be accessed by the
+\fBget-attributes\fR command (or Scheme procedure) with the drawing name
+\fIpopup-name\fR and the object \fBpopup\fR.  The attributes defined
+are \fBentries\fR (returns a list of menu entries and actions),
+\fBforeground\fR, \fBbackground\fR, \fBfont\fR, and \fBattributes\fR (returns
+a list of attributes that the object responds to).
+
+The \fBset-attributes\fR command (or Scheme procedure) is used to modify a
+popup menu.  Menu entries can be changed by  
+\fB(replace-name \fIindex name\fB)\fR and
+\fB(replace-action \fIindex action\fB)\fR, where the index of the first
+menu entry is 0.  Color and font changes for the whole menu are made by
+\fB(foreground \fIforeground\fB)\fR, \fB(background \fIbackground\fB)\fR, and
+\fB(font "\fIfont\fB")\fR.  Finally a popup menu is deleted by setting the
+attribute \fB(delete-object)\fR.
+
+Popup menus are best shown by example.  Here's a terminal log showing a
+drawing with three objects and two menus.  The events logged reflect mouse
+actions by the user.  Note the inclusion of a clear "background" in the
+drawing to catch mouse clicks that are not on any colored object.
+
+.nf
+csh >ezd
+(window popups 400 400)
+(set-drawing objects)
+(overlay popups objects)
+(object background (fill-rectangle 0 0 400 400 clear))
+(object red-circle (fill-arc 100 100 100 100 0 360 red))
+(object blue-square (fill-rectangle 250 250 100 100 blue))
+(define-popup days "Monday" (log-event) "Tuesday" (log-event)
+		   "Wednesday" (log-event) "Thursday" (log-event)
+		   "Friday" (log-event) "Saturday" (log-event)
+		   "Sunday" (log-event))
+(define-popup seasons "Winter" (log-event) "Spring" (log-event)
+		      "Summer" (log-event) "Fall" (log-event) blue white)
+(when * button1down (days))
+(when * meta button1down (seasons))
+(when * button3down (ezd '(quit)))
+.fi
+.in +5
+\fI ... log of menu events ...\fR
+.in -5
+.nf
+(POPUP POPUPS OBJECTS RED-CIRCLE 45 116 45 116 DAYS "Friday")
+(POPUP POPUPS OBJECTS RED-CIRCLE 40 84 40 84 SEASONS "Fall")
+(POPUP POPUPS OBJECTS BLUE-SQUARE 52 11 52 11 DAYS "Monday")
+(POPUP POPUPS OBJECTS BLUE-SQUARE 36 67 36 67 SEASONS "Summer")
+.fi
+.in +5
+\fI ... Get and set attributes ...\fR
+.in -5
+.nf
+(get-attributes days popup 0 foreground background)
+(GET-ATTRIBUTES #F DAYS POPUP #F #F 9 383 0 BLACK WHITE)
+(set-attributes days popup (replace-action 0 #f) (replace-action 6 #f))
+.fi
+.in +5
+\fI ... press button 3 to exit ...\fR
+.in -5
+.nf
+csh >
+.fi
+.SH SLIDERS
+
+\fB (slider \fIname x y width height indicator-size min-value max-value value jump-size action [foreground [background]] [stipple]\fB)\fR
+
+defines a slider (a horizontal or vertical rectangular area with a movable
+indicator) named \fIname\fR in the \fIcurrent drawing\fR.  The slider is a
+\fIwidth\fR by \fIheight\fR rectangle who's minimum coordinates are \fIx\fR and
+\fIy\fR.  The entire rectangle is filled with the \fIbackground\fR color
+(default is white) and edged with the \fIforeground\fR color (default is
+black).  The movable indicator is drawn as a rectangle within this area in
+the \fIforeground\fR color with the optional \fIstipple\fR.
+The size of the indicator, \fIindicator-size\fR, is specified in
+arbitrary application units as are the minimum value, \fImin-value\fR,
+the maximum value, \fImax-value\fR, and current value, \fIvalue\fR.
+
+The slider is manipulated using the mouse in the following manner.  When mouse
+button 1 is clicked on the background, the indicator and slider value are moved
+\fIjump-size\fR units toward the mouse cursor and then the \fIaction\fR is
+taken.  When mouse button 2 is clicked on the background, the indicator and
+slider value are moved to that position and then the \fIaction\fR is taken.
+Finally, the indicator can be dragged by pushing button 1 down on the indicator
+and moving the mouse.  The indicator will follow the mouse, evaluating the
+action as it follows.  When the action is taken, the object name is either
+\fIname\fR or \fIname-INDICATOR\fR and the \fImisc-info\fR associated with the
+event is a list containing the current value of the slider.
+
+Once defined, the command \fBget-attributes\fR (or the Scheme procedure) can be
+used to access the slider's attributes:  \fBx\fR, \fBy\fR, 
+\fBwidth\fR, \fBheight\fR, \fBindicator-size\fR, \fBmin-value\fR,
+\fBmax-value\fR, \fBvalue\fR, \fBjump-size\fR, \fBaction\fR,
+\fBforeground\fR, \fBbackground\fR, \fBforeground-stipple\fR, and
+\fBattributes\fR (returns a list of the object's attributes).
+
+A slider's attributes may be changed by \fB(x \fIx\fB)\fR,
+\fB(y \fIy\fB)\fR, \fB(width \fIwidth\fB\fR,
+\fB(height \fIheight\fB)\fR, \fB(indicator-size \fIindicator-size\fB)\fR,
+\fB(min-value \fImin-value\fB)\fR, \fB(max-value \fImax-value\fB)\fR,
+\fB(value \fIvalue\fB)\fR, \fB(jump-size \fIjump-size\fB)\fR,
+\fB(action \fIaction\fB)\fR, \fB(foreground \fIforeground\fB)\fR,
+\fB(background \fIbackground\fB)\fR, and
+\fB(foreground-stipple \fIstipple\fB)\fR.
+A slider is deleted by setting the attribute \fB(delete-object)\fR.
+.SH TEXT DRAWINGS
+A text-drawing is a drawing that contains the text of a document.  Text in the
+document may be editted or selected and copied to other text documents or X
+applications.  As changes are made to the document, the text is automatically
+justified.  Like any other \fBezd\fR drawing, a text-drawing may be viewed in
+more than one window.
+
+\fB (text-drawing \fIname width [\fBpoints\fI] [color] [stipple] ["font"] [cursor-color [highlight-color] [highlight-stipple]] [\fBread-only\fI] [\fBunjustified\fI] \fB) \fR
+
+creates a text-drawing named \fIname\fR that is \fIwidth\fR pixels
+(or points if
+\fBpoints\fR is specified) width.  Text is printed using the optional
+\fIfont\fR, \fIcolor\fR (default is black), and \fIstipple\fR (default is
+none).  When the cursor is visible, it is \fIcursor-color\fR (default is the
+text color).  Text is highlighted by a bar in \fIhighlight-color\fR (default is
+gray95) and \fIhighlight-stipple\fR (default is no stipple). If the 
+\fBread-only\fR option
+is specified, then the document may not be edited.  If the
+\fBunjustified\fR option is
+specified, then the document is not automatically justified.
+
+Once a text-drawing has been created, the \fBget-attribute\fR command (or
+Scheme procedure) can be used to get a variety of information from it.  Note
+that line and character indices start at zero and that the object name
+used is always \fBtext-drawing\fR.  The
+text-drawing command information can be retrieved using the
+attributes \fBwidth\fR, \fBtext-color\fR, \fBtext-stipple\fR, \fBfont\fR,
+\fBcursor-color\fR, \fBhighlight-color\fR, \fBhighlight-stipple\fR, and
+\fBoptions\fR (returns a list of the selected options).  The height in pixels
+of each row of text is returned by \fBrow-height\fR.  The cursor position
+(either a
+list of line and character indices or \fB#f\fR when the cursor is not
+displayed) is returned by \fBcursor\fR.  The highlight position
+(either a list of
+the starting and ending line and character indices or \fB#f\fR with nothing
+is highlighted) is returned by \fBhighlight\fR.  The number of lines in the
+drawing is
+returned by \fBlines\fR.  The text string in \fIline\fR of the drawing is
+returned
+by \fB(text-line \fIline\fB)\fR.  Information about a view of the
+text-drawing in
+a window \fIwindow\fR is returned by \fB(view \fIwindow\fB)\fR.  If the view
+exists, then a list consisting of first visible line number, last visible line
+number, and the name of the associated slider (or \fB#f\fR if no slider) is
+returned.  A \fB#f\fR is returned when there is no such view.  An xy position
+in the text-drawing is translated to a list containing the line index,
+character index, and text of that line by \fB(xy->line-char-text \fIx y\fB)\fR.
+Finally, the list of all attributes is returned by \fBattributes\fR.
+
+The \fBset-attribute\fR command (or Scheme procedure) is used make changes to
+a text-drawing.  A view of a text-drawing is created by the attribute
+\fB(view \fIwindow x y width height slider-width\fB)\fR,
+where \fIx\fR, \fIy\fR,
+\fIwidth\fR, and \fIheight\fR specify the area in pixels of \fIwindow\fR to 
+use.  If \fIslider-width\fR is non-zero, then it specifies the width of a
+slider for scrolling the text.  A view is deleted by \fB(delete-view
+\fIwindow\fB)\fR.  Text is inserted at the end of a text-drawing by
+\fB(insert \fI"text"\fB)\fR.  Text is inserted before the specified line and
+character positions by \fB(insert \fIline char "text"\fB)\fR.  A range of text,
+including the end points, is deleted from a text-drawing by
+\fB(delete \fIline0 char0 line1 char1\fB)\fR.  A range of text from a starting
+position through the end of the text-drawing is deleted by
+\fB(delete \fIline char \fBend)\fR.  The cursor is disabled by \fB(cursor)\fR
+and set by \fB(cursor \fIline char\fB)\fR.  An area is highlighted by
+\fB(highlight \fIline0 char0 line1 char1\fB)\fR and a highlight is cleared by
+\fB(hightlight)\fR.  A view of a text-drawing is scrolled by
+\fB(scroll \fIwindow line\fB)\fR so that \fIline\fR is the first line of the
+text-drawing visible in \fIwindow\fR.  Finally, a text-drawing and all its
+views is deleted by \fB(delete-object)\fR.
+
+The application user interacts with a view of a text-drawing using the mouse
+and the keyboard.  If the view has a slider, then text can be scrolled by
+manipulating the slider as earlier described.  If the text-drawing is
+designated as \fBread-only\fR, then the only thing that a user can do is
+select text for use by another X application.  This is done by pressing mouse
+button 1 and dragging the mouse over the text.  The selected text is
+highlighted and will remain highlighted until another selection is made.
+
+Text drawings that are not designated
+\fBread-only\fR may be edited in the following
+manner.  The cursor is positioned by either clicking mouse button 1 or by the
+cursor keys.  Changing the cursor position removes any current selection.
+A selection is made by pressing mouse button 1 and dragging over
+the text.  The cursor is automatically left at the end of the selection.
+Typing backspace or control-h deletes the current selection if it exists, or
+the character before the cursor if there is no selection.  Typing tab or any
+key in the inclusive ASCII range " " through "~" results in the current
+selection (if any) being deleted and the character inserted before the cursor.
+A compose-z (hold down compose and type z) undoes the last selection deletion.
+A compose-x deletes the current selection, and makes it available for other
+X applications (puts it in X's cut buffer 0, and
+clears the owner of the primary selection).  A compose-c copies the current
+selection and makes it available for other X applications.  A compose-v inserts
+the contents of X's cut buffer 0 in front of the cursor.
+
+At this point, an example is in order.  The following command sequence creates
+a text drawing and a view to it.  Type in it and experiment with the editing
+commands.
+.nf
+
+csh >ezd
+(text-drawing t 400 black "8x13" red yellow)
+(window w 100 100 420 300)
+(set-attributes t text-drawing (view w 0 0 420 300 20))
+^D
+csh >
+.fi
+.SH STEPPING THE APPLICATION PROGRAM
+Users want to be able to stop a program and then
+step it along.  Built-in to \fBezd\fR are commands and event action
+procedures that allow this to be done without the application program
+having to monitor events reported by \fBezd\fR. 
+
+At each logical pause point in the program, insert a \fB(step #t)\fR command.
+Next, define event actions to turn stepping on and off and to go to the next
+step.  The event action \fB(ezd '(stepper #t))\fR turns stepping on.  The
+program is advanced to the next step by the event action \fB(next-step)\fR.
+Finally, stepping is disabled and the program is allowed to continue to run
+by the event action \fB(ezd '(stepper #f))\fR.  Those fluent in Scheme can
+produce more complex steppers by studying the following command descriptions.
+
+\fB (step \fIexpression\fB) \fR
+
+indicates a step in the application program.  The command sets
+the top level variable
+\fB*step*\fR to the Scheme expression \fIexpression\fR, sets the top level
+value of the top-level variable \fB*next-step*\fR to \fB#f\fR
+and then evaluates the value of the top level variable
+\fB*stepper*\fR.  If
+this value is true, then \fBezd\fR stops reading commands on stdin until the
+expression 
+\fB(next-step)\fR is evaluated (typically it's a button click action).
+
+\fB (stepper \fIexpression\fB) \fR
+
+defines the function controlling stepping by setting the value of
+\fB*stepper*\fR to be the Scheme expression \fIexpression\fR.  The initial
+value of \fB*stepper*\fR is \fB#f\fR.
+.SH POSTSCRIPT COMMANDS
+The following commands control the output of Postscript graphics.
+
+\fB (postscript \fIwindow \fB"\fIfile-name\fB")\fR
+
+writes a Postscript description of the contents of \fIwindow\fR to
+the file \fIfile-name\fR.
+
+\fB (define-font "\fIX-font\fB" "\fIPostscript-font\fB" \fIsize\fB) \fR
+
+defines the representation of
+text written in the X font \fIX-font\fR as \fIsize\fR point
+\fIPostscript-font\fR in Postscript files.
+.SH OTHER COMMANDS
+\fB (include "\fIfile-name\fB") \fR
+
+reads and executes \fBezd\fR commands or Scheme expressions from the file
+\fIfile-name\fR.  The file is assumed to contain Scheme if the file name has
+the suffix \fB.sc\fR; otherwise it is assumed to contain \fBezd\fR commands.
+
+\fB (scheme \fIscheme-expression ...\fB) \fR
+
+sequentially evaluates the \fIscheme-expression(s)\fR found in the command.
+
+\fB (quit) \fR
+
+resets the graphics system.  If \fBezd\fR is being run as a
+server, the process terminates.  When \fBezd\fR is run as a Scheme
+interpreter, control returns to the caller unless this command is issued
+within an event action in which case control returns to the top-level
+Scheme interpreter.
+
+\fB (pause \fI[milliseconds]\fB) \fR
+
+forces out any buffered changes and stops reading commands from stdin until
+either \fImilliseconds\fR pass, or some event action issues a \fBquit\fR
+command.
+
+\fB (bell) \fR
+
+rings the bell on the X display.
+.bp
+.SH INVOCATION FROM C
+The following program opens a pipe to an \fBezd\fR process and then sends
+commands to it to draw a window containing a button.  When the button is
+clicked by mouse button 1, the program terminates.  A larger example is a
+4x4 puzzle found in puzzle_in_c.c.
+.nf
+.eo
+
+#include <stdio.h>
+FILE	*out,		/* ezd commands sent on this stream */
+	*in;		/* ezd events are read in this stream */
+void  start_ezdprocess()
+{
+	int	toezd[ 2 ],	/* Used to send commands to ezd */
+		fromezd[ 2 ];	/* Used by ezd to report events */
+
+	pipe( toezd );
+	pipe( fromezd );
+	if  (fork() == 0)  {
+	   /* Child process */
+	   close( 0 );			/* Move stdin */
+	   dup( toezd[ 0 ] );
+	   close( toezd[ 0 ] );
+	   close( toezd[ 1 ] );
+	   close( 1 );			/* Move stdout */
+	   dup( fromezd[ 1 ] );
+	   close( fromezd[ 0 ] );
+	   close( fromezd[ 1 ] );
+	   execlp( "ezd", "ezd", 0 );	/* Start ezd & transfer control */
+	   exit( 1 );			/* Error exit */
+	}
+	/* Parent process */
+	close( toezd[ 0 ] );
+	out = fdopen( toezd[ 1 ], "w" );
+	close( fromezd[ 1 ] );
+	in = fdopen( fromezd[ 0 ], "r" );
+}
+.fi
+.ec \
+.bp
+.nf
+.eo
+/* Create window and wait for the button to be pushed. */
+main()
+{
+	char  input[ 100 ];	/* Event information read in here */
+
+	start_ezdprocess();
+	fputs( "(window bw 300 200 \"Click button 1 to Exit\")", out );
+	fputs( "(set-drawing bw) (overlay bw bw)", out );
+	fputs( "(object button (fill-rectangle 100 50 100 100 blue)", out );
+	fputs( "(text 100 50 100 100 center center \"EXIT\" white))", out );
+	fputs( "(click button 1 (log-event))", out );
+	fflush( out );
+	fgets( input, 100, in );
+	exit( 0 );
+}	
+.fi
+.ec \
+.bp
+.SH INVOCATION FROM SCHEME
+While C programs typically send their commands to an \fBezd\fR server via a
+pipe, Scheme programmers have the option of running their application in the
+\fBezd\fR process.  When the \fBezd\fR command is executed with the option
+\fB-i\fR, it provides a Scheme interpreter with Xlib support and access to
+\fBezd\fR.
+Drawing commands are issued by calling the procedure \fBezd\fR with one or
+more commands, where each command is a list.  One big advantage of using
+\fBezd\fR this way is that Scheme procedures may be supplied as actions for
+the \fBwhen\fR command as is done in the following program:
+.nf
+.eo
+
+;;; Draw a circle in the window and then respond to mouse clicks.
+;;;
+;;; 	button1 - move circle to button location.
+;;;	button3 - exit.
+
+(define (CIRCLE)
+
+    (define (MOVE-C)
+	    (ezd `(object circle (fill-arc ,(- *mouse-window-x* 10)
+				     ,(- *mouse-window-y* 10) 20 20 0 360))))
+
+    (ezd '(window circle 300 300 "Circle")
+	 '(set-drawing circle)
+	 '(overlay circle circle)
+	 '(object background (fill-rectangle 0 0 300 300 clear))
+	 '(object circle (fill-arc 100 100 20 20 0 360))
+	 `(click background 1 ,move-c)
+	 '(click * 3 (begin (display 'stop-circle) (ezd '(quit)))))
+    'start-circle)
+
+.fi
+.ec \
+Below is a terminal log of an \fBezd\fR session where this program was run:
+.nf
+.eo
+
+csh 152 >ezd -i
+Scheme->C -- 28sep90jfb -- Copyright 1989 Digital Equipment Corporation
+> (load "circle.sc")
+CIRCLE
+"circle.sc"
+> (circle)
+START-CIRCLE
+>
+.fi
+.ec \
+.in +5
+\fI ... Circle window is active, interpreter still available ...\fR
+.in -5
+.bp
+.nf
+.eo
+> (+ 23 23)
+46
+> (ezd '(pause))
+.fi
+.ec \
+.in +5
+\fI ... pause causes interpreter to wait for ezd completion ...\fR
+.in -5
+.nf
+.eo
+STOP-CIRCLE> ^D
+csh 153 >
+
+.fi
+.ec \
+Compiled Scheme programs may access \fBezd\fR by including either an external
+declaration for ezd, \fB(define-external (ezd . x) ezd)\fR, or a
+\fB(with ezd)\fR form in their module declaration.  The \fBezd\fR
+library is typically found in the archive file \fBlibezd.a\fR.  For an example
+of a Scheme program that uses \fBezd\fR that can be compiled, see puzzle.sc.
+.SH EXTENDING EZD
+As Scheme is both the implementation and the extension language for \fBezd\fR,
+there need be no boundary between the underlying system and user extensions.
+For example, a user might want to add some Scheme code to implement their
+own style of buttons.
+When the mouse enters the button, the user wants to see the button's border
+thickened.  When mouse button 1 is depressed, the button should reverse.  Only
+when the mouse button comes up is the button action (print
+a message on stdout) done.  The following Scheme procedure implements such a
+button.  Notice how Scheme's lexically scoped first-class
+procedures elegantly capture the button's state and express its event actions.
+.nf
+
+(define (MAKE-BUTTON button-name x y)
+
+    (define TEXT-COLOR 'black)
+    (define KEY-COLOR 'white)
+    (define WIDTH 80)
+    (define HEIGHT 30)
+    (define FONT "8x13")
+    
+    (define BOLD #f)
+    (define HIGHLIGHT #f)
+    
+    (define (ENTER) (if (not *mouse-button1*) (draw-key #t #f)))
+    
+    (define (EXIT) (draw-key #f #f))
+    
+    (define (BUTTON-DOWN) (draw-key #t #t))
+    
+    (define (BUTTON-UP)
+	    (if highlight
+		(format stdout-port "(BUTTON ~s)~%" button-name))
+	    (draw-key #t #f))
+
+    (define (DRAW-KEY b h)
+	    (set! bold b)
+	    (set! highlight h)
+	    (ezd `(object ,button-name
+			  (fill-rectangle ,x ,y ,width ,height
+			      ,(if h text-color key-color))
+			  (rectangle ,x ,y ,width ,height ,(if b 3 0))
+			  (text ,x ,y ,width ,height
+				center center ,(symbol->string button-name)
+				,(if h key-color text-color) ,font))))
+    
+    (draw-key #f #f)
+    (ezd `(when ,button-name enter ,enter))
+    (ezd `(when ,button-name exit ,exit))
+    (ezd `(when ,button-name button1down ,button-down))
+    (ezd `(when ,button-name button1up ,button-up)))
+
+.fi
+Make-button is tested by running \fBezd\fR as an interactive Scheme system as
+follows:
+.nf
+
+	csh 813 >ezd -i
+	Scheme->C -- 28sep90jfb -- Copyright 1989 Digital Equipment Corporation
+	> (load "button.sc")
+	BUTTON
+	"button.sc"
+	> (make-button 'button1 10 10)
+	#F
+	> (make-button 'button2 10 50)
+	#F
+	> (make-button 'button3 10 90)
+	#F
+	> (BUTTON BUTTON1)
+	(BUTTON BUTTON2)
+	(BUTTON BUTTON3)
+	(BUTTON BUTTON1)
+	^D
+	csh 814 >
+
+.fi
+Once tested, the same buttons are built with the following \fBezd\fR
+commands:
+.nf
+
+	(include "button.sc")
+	(scheme (make-button 'button1 10 10) (make-button 'button2 10 50))
+	(scheme (make-button 'button3 10 90))
+
+.fi
+The user could go one step futher and add a \fBbutton\fR command to \fBezd\fR.  This
+is done adding the following Scheme code to the button.sc file:
+.nf
+
+	(define-ezd-command
+	    `(button ,symbol? ,number? ,number?)
+	    "(button button-name x y)"
+	    make-button)
+
+.fi
+This allows an application to build the same buttons with the commands:
+.nf
+
+	(include "button.sc")
+	(button button1 10 10)
+	(button button2 10 50)
+	(button button3 10 90)
+
+.fi
+This section has given a brief introduction to the mechanics of extending \fBezd\fR.  For the moment, users wishing more information must consult the source.
+.SH DIAGNOSTICS
+The disgnostic messages produced by \fBezd\fR are printed on the standard
+error file.
+.SH KNOWN PROBLEMS
+Stipples are ignored when Postscript files are written.
+.SH QUESTIONS, COMMENTS, AND COMPLAINTS
+bartlett@decwrl.dec.com
+.SH SEE ALSO
+scc(1), sci(1)
