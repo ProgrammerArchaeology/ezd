@@ -3,6 +3,8 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 /* start_ezd process connects the read side to the "toezd" pipe to stdin and
    the write side of the "fromezd" pipe to stdout, and then exec's ezd.
@@ -42,7 +44,7 @@ void  start_ezdprocess()
 
 int	tile_size = 40;		/* Pixel size of each tile. */
 
-struct { int x; int y } position[ 16 ];
+struct { int x; int y; } position[ 16 ];
 				/* Records the position of each tile. */
 
 int	initial_tiles[] = {10,15,12,3,13,8,7,1,2,14,6,4,9,5,11};
@@ -80,17 +82,18 @@ void  draw_tile( tile, x, y )
 void  handle_events() 
 {
 	char  event[1000],	/* Event string */
-	      ignore[100],	/* Ignore converted values */
+	      ignorestr[100],	/* Ignore converted values */
 	      inputchar[ 100 ];	/* Character from keyboard */
 	int  n,			/* # items converted */
+       ignore,  /* Ignore converted values */
 	     tile,		/* Tile number */
 	     save_x, save_y;	/* Used to move a tile */
 
 loop:	fflush( out );
 	fgets( event, 1000, in );
 	n = sscanf( event, "(CLICK PUZZLE PUZZLE T%d %d %d %d %d %d %d %d %d)",
-		    &tile, ignore, ignore, ignore, ignore, ignore, ignore,
-		    ignore, ignore );
+		    &tile, &ignore, &ignore, &ignore, &ignore, &ignore, &ignore,
+		    &ignore, &ignore );
 	if  (n == 9)  {
 	   /* Button 1 down on a tile. */
 	   if  (abs( position[ 0 ].x-position[ tile ].x )+
@@ -105,14 +108,14 @@ loop:	fflush( out );
 	   goto loop;
 	}
 	n = sscanf( event, "(KEYPRESS PUZZLE PUZZLE %s %d %d %d %d \"%s\")",
-		    ignore, ignore, ignore, ignore, ignore, inputchar );
-	if  (n == 6 && inputchar[ 0 ] == 3)  exit();
+		    ignorestr, &ignore, &ignore, &ignore, &ignore, inputchar );
+	if  (n == 6 && inputchar[ 0 ] == 3)  exit(0);
 	goto  loop;
 }
 	
 /* The main program. */
 
-main()
+int main()
 {
 	int  puzzle_size = tile_to_pixel( 4 );
 	int  x, y,

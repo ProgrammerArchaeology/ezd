@@ -8,8 +8,10 @@
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <unistd.h>
 
 /* start_ezd process connects the read side to the "toezd" pipe to stdin and
    the write side of the "fromezd" pipe to stdout, and then exec's ezd.
@@ -202,7 +204,7 @@ char* ezd_commands[] = {
 	 "(when cover motion (log-event))",
 	 NULL };
 
-main()
+int main()
 {
 	int  i;		/* Loop index. */
 
@@ -210,7 +212,7 @@ main()
 	start_ezdprocess();
 	/* Issue initial ezd commands. */
 	for  (i = 0; ezd_commands[ i ] != NULL; i++)
-	   fprintf( out, ezd_commands[ i ] );
+	   fputs( ezd_commands[ i ], out );
 	/*  Handle ezd events. */
 	handle_events();
 	exit( 0 );
