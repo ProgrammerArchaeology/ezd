@@ -23,7 +23,7 @@ by calling the procedure \fIezd\fR.
 .TP 10
 \fB -l
 .ft R
-log incomming graphics commands to the file \fBezd.LOG\fR in the current
+log incoming graphics commands to the file \fBezd.LOG\fR in the current
 directory. Command logging may also be enabled by setting the environment
 variable \fBEZDLOG\fR to the name for the log file.
 .TP 10
@@ -45,7 +45,7 @@ unless this flag, or the \fB-p\fR or \fB-i\fR flags are specified, the
 \fB -sc\fIxx
 .ft R
 configure the heap.  See the man page for \fBsci\fR for details.
-.SH GETTTING STARTED
+.SH GETTING STARTED
 All commands are in the form of Scheme lists. A semicolon ";" indicates the
 start of a comment.  The comment continues until the end of the line.  Space,
 tab, and newline characters may be used to separate
@@ -177,7 +177,7 @@ a monochrome portable bitmap (PBM, type P1), a gray scale portable bitmap
 (PGM, type P2), or a color portable bitmap (PPM, type P3).  If the width and
 height of the quilt are not defined, they default to the dimensions of the
 bitmap. X11 and monochrome
-bitmaps are handled as follows.  If no color is suppled, then the bits that
+bitmaps are handled as follows.  If no color is supplied, then the bits that
 are on are drawn in black, and the bits that are off are holes.  If one color
 is supplied, then the bits that are on are drawn in that color, and the bits
 that are off are holes.  When two colors are supplied, the bits that are on are
@@ -271,7 +271,7 @@ draws a named object in the \fIcurrent drawing\fR.  Object names may be any
 Scheme symbol except *.
 If the object already exists,
 then it is replaced by the new object.  If no drawing commands are specified,
-the the object still exists, but with a null graphical representation.
+the object still exists, but with a null graphical representation.
 The first time that a named object is drawn
 assigns its position in the drawing hierarchy.  Whenever it is redrawn, it will
 occupy the same position unless moved by a \fBfloat\fR or \fBsink\fR command,
@@ -455,7 +455,7 @@ easier in \fBezd\fR as it provides a simpler and more powerful graphics and
 event model than is provided by Xlib and Xt.  Enough tub beating, on to
 events.
 .SH HANDLING EVENTS
-One or more \fBwhen\fR commands is used to make an object sensative to events.
+One or more \fBwhen\fR commands is used to make an object sensitive to events.
 
 \fB (when \fIobject event action\fB) \fR
 .br
@@ -1368,7 +1368,7 @@ commands:
 	(scheme (make-button 'button3 10 90))
 
 .fi
-The user could go one step futher and add a \fBbutton\fR command to \fBezd\fR.  This
+The user could go one step further and add a \fBbutton\fR command to \fBezd\fR.  This
 is done adding the following Scheme code to the button.sc file:
 .nf
 
@@ -1389,7 +1389,7 @@ This allows an application to build the same buttons with the commands:
 .fi
 This section has given a brief introduction to the mechanics of extending \fBezd\fR.  For the moment, users wishing more information must consult the source.
 .SH DIAGNOSTICS
-The disgnostic messages produced by \fBezd\fR are printed on the standard
+The diagnostic messages produced by \fBezd\fR are printed on the standard
 error file.
 .SH KNOWN PROBLEMS
 Stipples are ignored when Postscript files are written.

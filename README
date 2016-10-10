@@ -13,7 +13,7 @@ the drawing.  PostScript renderings of a window's contents are produced by a
 single command.
 
 Loose coupling to the application program:  unlike most X tools, ezd does not
-require any event handling by the application.  The ezd server mantains window
+require any event handling by the application.  The ezd server maintains window
 contents.  As the application makes changes to drawings, the server smoothly
 corrects the display.  Communication between the application and the server is
 via text streams so feel free to write your application in COBOL.

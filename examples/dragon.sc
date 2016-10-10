@@ -319,7 +319,7 @@
 			     right up ,text "8x13")))))
 
 ;;; In order to play the game, the program must have an understanding of the
-;;; dragon's geometry.  The data stuctures and query procedures for this
+;;; dragon's geometry.  The data structures and query procedures for this
 ;;; information are maintained by the following procedures.
 
 (define *TILE-GEOMETRY* #f)
