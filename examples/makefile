@@ -2,7 +2,8 @@
 .SUFFIXES: .sc .o
 
 SCFLAGS = -O
-XLIB = /udir/bartlett/mips/bin/scxl.a -lX11
+XLIB = /usr/local/lib/scheme2c/scxl.a -lX11 -L/opt/X11/lib
+
 EZD = ../libezd.a
 
 all:	dragon puzzle_in_c puzzle clock

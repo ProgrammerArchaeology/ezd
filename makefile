@@ -9,17 +9,9 @@ OBJS =	ezd.o pps.o commands.o ginfo.o display.o window.o view.o drawing.o \
 
 SCFLAGS = -O
 
-#SCXL = /udir/bartlett/alpha/bin/scxl.a
-#SC = /udir/bartlett/alpha/bin/schemetoc/libsc.a
-#X11 = -non_shared -lX11 -ldnet_stub
-
-#SCXL = /udir/bartlett/mips/bin/scxl.a
-#SC = /udir/bartlett/mips/bin/schemetoc/libsc.a
-#X11 = -lX11
-
-SCXL = /wrl/mips/lib/scxl.a
-SC = /wrl/mips/lib/schemetoc/libsc.a
-X11 = -lX11
+SCXL = /usr/local/lib/scheme2c/scxl.a
+SC = /usr/local/lib/scheme2c/libsc.a
+X11 = -lX11 -L/opt/X11/lib
 
 .sc.o:
 	scc -c ${SCFLAGS} $*.sc
