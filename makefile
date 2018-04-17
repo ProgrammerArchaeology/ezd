@@ -24,20 +24,14 @@ libezd.a:	${OBJS}
 	ar q libezd.a ${OBJS}
 	ranlib libezd.a
 
-DECstation-ezd.o:	${OBJS}
-	ld -o DECstation-ezd.o -r ezdmain.o ${OBJS} ${SCXL} ${SC}
-
-ezd-for-DECstation:
-	cc -o ezd DECstation-ezd.o ${X11} -lm
-
 clean:
-	rm -f ${OBJS} ezdmain.o DECstation-ezd.o
+	rm -f ${OBJS} ezdmain.o
 
 noprogs:
 	rm -f ezd libezd.a
 
 tartape:
-	tar cvf ezd.tar README DECstation-ezd.o *.sc *.sch makefile \
+	tar cvf ezd.tar README *.sc *.sch makefile \
 		doc/ezd.1 doc/ezd.psf \
 		examples/clock.c examples/clock.sc examples/dragon.sc \
 		examples/puzzle.sc examples/puzzle_in_c.c examples/xc.sc \
@@ -45,4 +39,4 @@ tartape:
 	rm -f ezd.tar.Z
 	compress ezd.tar
 
-all:	ezd libezd.a DECstation-ezd.o
+all:	ezd libezd.a
